@@ -1,63 +1,174 @@
-# Alaska Wildfire Prediction Using Satellite Imagery
+# 🔥 Alaska Wildfire Prediction Using Satellite Imagery & Deep Learning
 
-**Mentors:** Yali Wang (ywang35 -at- alaska.edu) and Arghya Kusum Das (akdas -at- alaska.edu)
+**Google Summer of Code 2026 — University of Alaska**  
+**Mentors:** Yali Wang, Arghya Kusum Das  
+**Applicant:** Salvatore — Mathematical Engineering, Intern and Master's Thesis Researcher in Deep Learning University of Naples Federico II
 
-**Overview:** Given Alaska’s unique wildfire patterns, where large-scale fires occur annually in boreal forests, tundra, and remote wilderness, predicting fire-prone areas can help mitigate disasters and optimize resource allocation. The presence of vegetation (fuel) is necessary for a fire, but the determining factors are weather conditions (humidity, wind speed, temperature) and an ignition source (lightning, human activity, etc.). 
-This project aims to develop a hybrid deep learning model to predict wildfire risk in Alaska by integrating optical, thermal, and synthetic aperture radar (SAR) satellite imagery with ground-based weather data.
-Traditional wildfire prediction relies on weather data, historical fire records, and human observations, which can be delayed or inaccurate in remote areas like Alaska. In contrast, satellite imagery provides real-time, high-resolution insights into vegetation health, thermal anomalies, burn severity mapping, soil moisture, fuel dryness, and even cloud-penetrating fire detection.
+---
 
-Satellite choices:
+A hybrid deep learning pipeline for predicting wildfire risk in interior Alaska using multi-modal satellite imagery (Sentinel-1 SAR, Sentinel-2 optical), ERA5 climate reanalysis data, and MTBS fire perimeters as ground truth.
 
-| Satellite | Resolution | Revisit Frequency | Why Use It? |
-| ------ | ------ | ------ | ------ |
-| Landsat 8 & 9 (NASA/USGS) | 30m (multispectral), 100m (thermal) | 16 days | Tracks pre/post-fire vegetation and burn severity with great detail.|
-| Sentinel-2 (ESA) | 10m (RGB, NIR), 20m (SWIR) | 5 days | High-resolution images for fire risk classification and early warnings. |
-| MODIS (Terra/Aqua, NASA) | 250m (fire detection), 1km (thermal) | Daily | Provides historical fire perimeters and active fire locations. |
-| VIIRS (Suomi NPP & NOAA-20) | 375m (fire detection), 750m (thermal) | Daily | Real-time fire monitoring, capturing active hotspots. |
-| Sentinel-1 (ESA) | 5m - 20m | 6-12 days | SAR imaging for vegetation moisture & burned area mapping. |
-| ALOS-2 (JAXA) | 10m - 100m | 14 days | L-band SAR for detecting dry fuel and terrain changes. |
+> **Key Result:** SpatialCNN trained on real Sentinel-1 SAR + dNBR data achieves **AUC-ROC 0.983** and **97% fire recall** on spatially-independent test tiles from the 2022 Alaska fire season.
 
-Additional ground data sources:
+---
 
-1). ERA5 Climate Reanalysis (ECMWF): Provides historical & real-time temperature, wind, and humidity data.
+## Results
 
-2). NOAA NWS Weather Data: Near real-time humidity, wind, and temperature.
+| Metric | Value | Notes |
+|--------|-------|-------|
+| AUC-ROC | **0.983** | Near-perfect fire/no-fire discrimination |
+| Fire Recall | **97%** | Only 1 of 38 fire tiles missed |
+| Fire Precision | 25% | Conservative — flags extra areas (desirable for early warning) |
+| Accuracy | 77.6% | Strong given 4.7% fire base rate |
+| Dataset | 2,460 tiles | 64×64 px, 7 channels, spatial block split |
 
-3). Alaska Fire Service (AFS) Wildfire Data: Historical ignition source data (lightning, human activity).
+## Project Structure
 
-**Current Status:** This project is currently in the research stage.
+```
+wildfire-prediction/
+├── src/
+│   ├── data_acquisition.py       # GEE exports: S2, S1, dNBR, fire labels, terrain, landcover
+│   ├── preprocessing.py          # Tile, normalize, spatial block split (synthetic demo)
+│   ├── preprocess_real_data.py   # Preprocess real GeoTIFFs into model-ready tiles
+│   ├── model.py                  # PyTorch: SpatialCNN, CNN-LSTM, WildfireTransformer
+│   ├── explore_era5.py           # ERA5 weather visualization & analysis
+│   ├── dashboard.py              # Streamlit + Folium GIS dashboard
+│   └── demo_pipeline.py          # Quick demo with synthetic data (no downloads needed)
+├── data/
+│   ├── raw/                      # GeoTIFF exports from GEE + ERA5 NetCDF
+│   │   └── era5/                 # Monthly ERA5 reanalysis (Apr–Sep 2022)
+│   ├── tiles/                    # Model-ready .npy tiles (train/test split)
+│   └── demo/                     # Auto-generated synthetic demo data
+├── outputs/                      # Figures, evaluation plots, model comparison
+├── models/                       # Saved PyTorch model checkpoints
+├── notebooks/
+│   └── Alaska_Wildfire_Prediction_GSoC_Showcase.ipynb
+├── fix_exports.py                # GEE export repair utility
+├── fix_exports2.py               # Terrain (ALOS) & S2 re-export at 30m
+├── train_real.py                 # Train CNN + Transformer on real data
+├── extract_era5.py               # Unzip CDS API downloads
+├── requirements.txt
+└── README.md
+```
 
-**Expected Outcomes:** 
-This project aims to develop a deep-learning model that predicts wildfire risk in Alaska using a combination of satellite and ground-based weather data. The expected outcome of this project would involve both the dataset preprocessing pipeline and the performance of the developed model. Especially, the dataset preprocessing would include how to process the pre-fire and post-fire images efficiently and integrate the ground-based data with satellite imagery. Expected outcomes include:
+## Quick Start
 
-Minimum viable product (MVP): 
+### 1. Install dependencies
 
-Fire risk classification: Given pre-fire satellite images, the model predicts the probability of a fire occurring within a defined time frame like 1 month, 3 months, or 6 months. The classifications should be "High Fire Risk," "Moderate Risk," or "No Risk."
+```bash
+pip install -r requirements.txt
+```
 
-1). Data pipeline development:
+### 2. Run demo (no data download needed)
 
-Preprocessing satellite images: Band selection, geospatial cropping, cloud removal (For this step, we are mostly interested in analyzing [Sentinel-2 data](https://dataspace.copernicus.eu/explore-data/data-collections/sentinel-data/sentinel-2));
+```bash
+python src/demo_pipeline.py
+```
 
-Synthetic Aperture Radar (SAR) analysis: Extracting fuel moisture & terrain features (For this step, we are mostly interested in extracting information like vegetation density and soil moisture from [Sentinel-1 SAR data](https://dataspace.copernicus.eu/explore-data/data-collections/sentinel-data/sentinel-1));
+Trains Random Forest + Gradient Boosting on synthetic wildfire features. Outputs feature importance, evaluation plots, and a risk map to `outputs/`.
 
-Time-series weather data integration: Incorporating temperature, wind, and humidity. We have access to past decades of weather data for almost the past 30 years for multiple different places in Alaska.
+### 3. Download real satellite data
 
-2). Model training and prediction:
+```bash
+# Authenticate with Google Earth Engine
+earthengine authenticate
 
-A hybrid model such as CNN-LSTM that analyzes satellite data and time-series weather trends (CNN-LSTM is just an example. We are open to multiple different types of analysis methodology);
+# Export satellite imagery to Google Drive
+python src/data_acquisition.py
+```
 
-A web-based GIS dashboard to visualize fire-prone regions in Alaska;
+This submits 8 export tasks to GEE (Sentinel-2, Sentinel-1, dNBR, fire labels, terrain, landcover) for the interior Alaska study area. Monitor progress at [code.earthengine.google.com/tasks](https://code.earthengine.google.com/tasks). Download completed GeoTIFFs from Google Drive → `wildfire_data/` folder into `data/raw/`.
 
-A report on model performance and fire risk metrics.
+### 4. Download ERA5 weather data
 
-**Required Skills:** Python. Experience with deep learning and machine learning.
+```bash
+python src/data_acquisition.py  # ERA5 section downloads via CDS API
+python extract_era5.py          # Unzip the downloaded files
+python src/explore_era5.py      # Visualize fire season weather
+```
 
-**Code Challenge:** Experience with multi-band satellite imagery, geospatial data processing (like ArcGIS Pro), and remote sensing.
+Requires a [CDS API key](https://cds.climate.copernicus.eu/api-how-to). Downloads 6-hourly reanalysis for April–September 2022 (temperature, humidity, wind, precipitation, soil moisture).
 
-**Source Code:** [https://github.com/YaliWang2019/AK-Satellite-Imagery-Wildfire-Prediction](https://github.com/YaliWang2019/AK-Satellite-Imagery-Wildfire-Prediction) (New Project)
+### 5. Preprocess and train
 
-**Discussion Forum:** [https://github.com/YaliWang2019/AK-Satellite-Imagery-Wildfire-Prediction/discussions](https://github.com/YaliWang2019/AK-Satellite-Imagery-Wildfire-Prediction/discussions)
+```bash
+# Preprocess real GeoTIFFs into 64×64 tiles
+python src/preprocess_real_data.py
 
-**Effort:** 350 Hours
+# Train deep learning models on real data
+python train_real.py
+```
 
-**Difficulty Level:** Medium/Hard
+### 6. Launch GIS dashboard
+
+```bash
+streamlit run src/dashboard.py
+```
+
+## Data Sources
+
+| Source | Type | Resolution | Use |
+|--------|------|-----------|-----|
+| [Sentinel-2](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED) | Optical | 10–20m | Vegetation indices (NDVI, NBR, NDMI) |
+| [Sentinel-1](https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD) | SAR | 10m | Soil moisture, vegetation structure (VV, VH) |
+| [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels) | Reanalysis | ~31km | Temperature, humidity, wind, precipitation |
+| [MTBS](https://www.mtbs.gov/) | Fire perimeters | 30m | Ground truth burn severity labels |
+| [ALOS DEM](https://developers.google.com/earth-engine/datasets/catalog/JAXA_ALOS_AW3D30_V3_2) | Terrain | 30m | Elevation, slope, aspect |
+| [MODIS LC](https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MCD12Q1) | Land cover | 500m | Fuel type classification |
+
+## Models
+
+### SpatialCNN (Baseline) — Current Best
+
+4 convolutional blocks (32→64→128→256), BatchNorm, ReLU, MaxPool, global average pooling, 2 FC layers. Trained with Focal Loss (γ=2) for class imbalance. **424K parameters.**
+
+### CNN-LSTM (Primary — In Development)
+
+Shared CNN encoder extracts spatial features per timestep → bidirectional LSTM captures temporal trends (6-month lookback) → fused with ERA5 weather time-series → 3-class risk output (High / Moderate / No Risk).
+
+### WildfireTransformer
+
+Vision Transformer with 8×8 patch embedding, learnable positional encoding, 4-layer encoder (4 heads, 128-dim). Comparison architecture for capturing long-range spatial dependencies.
+
+## Study Area
+
+- **Region:** Interior Alaska — Fairbanks
+- **Coordinates:** 63.5°N – 64.5°N, 150.5°W – 149.0°W
+- **Fire Year:** 2022 (3M+ acres burned statewide)
+- **Projection:** EPSG:3338 (Alaska Albers Equal Area)
+
+## Key Design Decisions
+
+- **Spatial block cross-validation** (5×5 grid) prevents autocorrelation leakage between train/test sets
+- **Focal Loss** addresses extreme class imbalance (fires are <5% of tiles)
+- **SAR as primary input** — Sentinel-1 penetrates cloud cover, which obscures 40–60% of optical scenes over Alaska
+- **Percentile normalization** (2nd–98th) handles outliers in SAR backscatter and burn severity indices
+- **Multi-resolution fusion** — all sources reprojected to 30m common grid; ERA5 weather attached as tile-level temporal features
+
+## ERA5 Fire Season Analysis (2022)
+
+| Variable | Mean | Max | Min |
+|----------|------|-----|-----|
+| Temperature | 8.2°C | 29.5°C | -22.6°C |
+| Wind Speed | 2.1 m/s | 8.8 m/s | — |
+| Soil Moisture | 0.307 m³/m³ | — | 0.032 m³/m³ |
+
+Peak fire conditions occurred in July–August with sustained high temperatures, low humidity, and declining soil moisture.
+
+## Requirements
+
+- Python 3.10+
+- PyTorch 2.0+
+- Google Earth Engine account ([sign up](https://earthengine.google.com/))
+- CDS API key ([register](https://cds.climate.copernicus.eu/))
+- ~10 GB disk space for satellite data
+
+## References
+
+- Huot, F. et al. (2022). "Next Day Wildfire Spread: A Machine Learning Dataset." *IEEE TGRS.*
+- Ban, Y. et al. (2020). "Near Real-Time Wildfire Progression Monitoring with Sentinel-1 SAR." *Remote Sensing.*
+- Jain, P. et al. (2020). "A Review of Machine Learning Applications in Wildfire Science." *Environmental Reviews.*
+
+## License
+
+This project is developed as part of Google Summer of Code 2026 for the University of Alaska.

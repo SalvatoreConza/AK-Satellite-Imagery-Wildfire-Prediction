@@ -1,0 +1,4 @@
+Model,AUC-ROC,Avg Precision,Fire Precision,Fire Recall,Fire F1,Accuracy
+Random Forest,0.7533,0.3992,0.529,0.120,0.196,0.852
+Gradient Boosting,0.7448,0.4201,0.722,0.173,0.280,0.866
+MLP (Neural Net),0.4745,0.1351,0.000,0.000,0.000,0.850

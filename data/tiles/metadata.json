@@ -1,0 +1,18 @@
+{
+  "band_names": [
+    "dNBR",
+    "VV_pre",
+    "VH_pre",
+    "VH_VV_pre",
+    "VV_post",
+    "VH_post",
+    "VH_VV_post"
+  ],
+  "n_channels": 7,
+  "tile_size": 64,
+  "n_train": 1968,
+  "n_test": 492,
+  "fire_rate_train": 0.0391260162601626,
+  "fire_rate_test": 0.07723577235772358,
+  "target_crs": "EPSG:3338"
+}

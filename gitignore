@@ -1,0 +1,21 @@
+# Data (too large for GitHub)
+data/raw/*.tif
+data/raw/era5/
+data/tiles/*.npy
+data/demo/
+
+# Models
+models/*.pth
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.venv/
