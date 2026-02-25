@@ -10,7 +10,7 @@ A hybrid deep learning pipeline for predicting wildfire risk in interior Alaska 
 
 ---
 
-## Results
+## Results at a Glance
 
 | Metric | Value | Notes |
 |--------|-------|-------|
@@ -19,6 +19,75 @@ A hybrid deep learning pipeline for predicting wildfire risk in interior Alaska 
 | Fire Precision | 25% | Conservative — flags extra areas (desirable for early warning) |
 | Accuracy | 77.6% | Strong given 4.7% fire base rate |
 | Dataset | 2,460 tiles | 64×64 px, 7 channels, spatial block split |
+
+### ROC & Precision-Recall Curves
+
+![ROC & Precision-Recall Curves](images/roc_curves.png)
+*SpatialCNN vs. Random Forest and Gradient Boosting baselines. The CNN dominates across all operating points.*
+
+### Spatial Risk Map
+
+![Spatial Wildfire Risk Map — Interior Alaska 2022](images/spatial_predictions.png)
+*Left: MTBS ground truth fire perimeters. Center: Mean dNBR signal from model input. Right: Model risk classification (High / Moderate / No Risk).*
+
+---
+
+## What the Model Sees
+
+### Sample Tiles — Fire vs No-Fire
+
+Each tile is 64×64 pixels with 7 channels from Sentinel-1 SAR and burn severity data:
+
+![Sample Tiles: Fire vs No-Fire](images/sample_tiles_fire_vs_nofire.png)
+*Top row: No-fire tile. Bottom row: Fire tile. Channels include dNBR, pre/post-fire VV, VH, and VH/VV ratio from Sentinel-1 SAR. Fire tiles show clear burn signatures in dNBR and altered backscatter patterns.*
+
+### Feature Distributions
+
+![Feature Distributions — Fire vs No-Fire](images/feature_distributions.png)
+*Per-band distribution comparison. dNBR shows the strongest separation between fire (red) and no-fire (blue) tiles, validating its use as the primary burn indicator.*
+
+---
+
+## ERA5 Fire Season Weather (2022)
+
+![ERA5 Weather Analysis](images/era5_weather.png)
+*Monthly temperature and weather patterns across the April–September 2022 fire season. Peak fire conditions in July–August coincide with sustained high temperatures and declining soil moisture.*
+
+| Variable | Mean | Max | Min |
+|----------|------|-----|-----|
+| Temperature | 8.2°C | 29.5°C | -22.6°C |
+| Wind Speed | 2.1 m/s | 8.8 m/s | — |
+| Soil Moisture | 0.307 m³/m³ | — | 0.032 m³/m³ |
+
+---
+
+## Model Training
+
+### SpatialCNN Architecture
+
+```
+Input: (batch, 7, 64, 64) — 7-channel SAR + dNBR tiles
+    ↓
+4× Conv blocks (32→64→128→256), BatchNorm, ReLU, MaxPool
+    ↓
+Global Average Pooling → 2 FC layers → Sigmoid
+    ↓
+Output: P(fire) — trained with Focal Loss (γ=2)
+```
+
+**424K parameters.** Trained with Focal Loss to handle extreme class imbalance (<5% fire tiles).
+
+### Training Curves
+
+![Training Progress](images/training_curves.png)
+*Loss and accuracy over 30 epochs. The model converges quickly with stable validation performance, showing no overfitting.*
+
+### Confusion Matrix
+
+![Confusion Matrix](images/confusion_matrix.png)
+*Tuned for high recall — in a fire warning system, missing a fire (false negative) is far worse than a false alarm. The model catches 37 of 38 fire tiles.*
+
+---
 
 ## Project Structure
 
@@ -34,17 +103,14 @@ wildfire-prediction/
 │   └── demo_pipeline.py          # Quick demo with synthetic data (no downloads needed)
 ├── data/
 │   ├── raw/                      # GeoTIFF exports from GEE + ERA5 NetCDF
-│   │   └── era5/                 # Monthly ERA5 reanalysis (Apr–Sep 2022)
 │   ├── tiles/                    # Model-ready .npy tiles (train/test split)
 │   └── demo/                     # Auto-generated synthetic demo data
 ├── outputs/                      # Figures, evaluation plots, model comparison
 ├── models/                       # Saved PyTorch model checkpoints
 ├── notebooks/
 │   └── Alaska_Wildfire_Prediction_Showcase.ipynb
-├── fix_exports.py                # GEE export repair utility
-├── fix_exports2.py               # Terrain (ALOS) & S2 re-export at 30m
+├── images/                       # README figures (extracted from notebook)
 ├── train_real.py                 # Train CNN + Transformer on real data
-├── extract_era5.py               # Unzip CDS API downloads
 ├── requirements.txt
 └── README.md
 ```
@@ -90,11 +156,8 @@ Requires a [CDS API key](https://cds.climate.copernicus.eu/api-how-to). Download
 ### 5. Preprocess and train
 
 ```bash
-# Preprocess real GeoTIFFs into 64×64 tiles
-python src/preprocess_real_data.py
-
-# Train deep learning models on real data
-python train_real.py
+python src/preprocess_real_data.py    # Preprocess real GeoTIFFs into 64×64 tiles
+python train_real.py                  # Train deep learning models on real data
 ```
 
 ### 6. Launch GIS dashboard
@@ -120,7 +183,7 @@ streamlit run src/dashboard.py
 
 4 convolutional blocks (32→64→128→256), BatchNorm, ReLU, MaxPool, global average pooling, 2 FC layers. Trained with Focal Loss (γ=2) for class imbalance. **424K parameters.**
 
-### CNN-LSTM (Primary — In Development)
+### CNN-LSTM (In Development)
 
 Shared CNN encoder extracts spatial features per timestep → bidirectional LSTM captures temporal trends (6-month lookback) → fused with ERA5 weather time-series → 3-class risk output (High / Moderate / No Risk).
 
@@ -142,16 +205,6 @@ Vision Transformer with 8×8 patch embedding, learnable positional encoding, 4-l
 - **SAR as primary input** — Sentinel-1 penetrates cloud cover, which obscures 40–60% of optical scenes over Alaska
 - **Percentile normalization** (2nd–98th) handles outliers in SAR backscatter and burn severity indices
 - **Multi-resolution fusion** — all sources reprojected to 30m common grid; ERA5 weather attached as tile-level temporal features
-
-## ERA5 Fire Season Analysis (2022)
-
-| Variable | Mean | Max | Min |
-|----------|------|-----|-----|
-| Temperature | 8.2°C | 29.5°C | -22.6°C |
-| Wind Speed | 2.1 m/s | 8.8 m/s | — |
-| Soil Moisture | 0.307 m³/m³ | — | 0.032 m³/m³ |
-
-Peak fire conditions occurred in July–August with sustained high temperatures, low humidity, and declining soil moisture.
 
 ## Requirements
 
