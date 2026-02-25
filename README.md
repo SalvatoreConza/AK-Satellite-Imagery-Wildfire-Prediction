@@ -1,8 +1,6 @@
-# 🔥 Alaska Wildfire Prediction Using Satellite Imagery & Deep Learning
+# Alaska Wildfire Prediction Using Satellite Imagery & Deep Learning
 
-**Google Summer of Code 2026 — University of Alaska**  
-**Mentors:** Yali Wang, Arghya Kusum Das  
-**Applicant:** Salvatore — Mathematical Engineering, Intern and Master's Thesis Researcher in Deep Learning University of Naples Federico II
+**Author:** Salvatore — Mathematical Engineering, Deep Learning Researcher @ University of Naples Federico II
 
 ---
 
@@ -42,7 +40,7 @@ wildfire-prediction/
 ├── outputs/                      # Figures, evaluation plots, model comparison
 ├── models/                       # Saved PyTorch model checkpoints
 ├── notebooks/
-│   └── Alaska_Wildfire_Prediction_GSoC_Showcase.ipynb
+│   └── Alaska_Wildfire_Prediction_Showcase.ipynb
 ├── fix_exports.py                # GEE export repair utility
 ├── fix_exports2.py               # Terrain (ALOS) & S2 re-export at 30m
 ├── train_real.py                 # Train CNN + Transformer on real data
@@ -171,4 +169,4 @@ Peak fire conditions occurred in July–August with sustained high temperatures,
 
 ## License
 
-This project is developed as part of Google Summer of Code 2026 for the University of Alaska.
+MIT
