@@ -1,4 +1,4 @@
-# Alaska Wildfire Prediction Using Satellite Imagery & Deep Learning
+# 🔥 Alaska Wildfire Prediction Using Satellite Imagery & Deep Learning
 
 **Author:** Salvatore — Mathematical Engineering, Deep Learning Researcher @ University of Naples Federico II
 
